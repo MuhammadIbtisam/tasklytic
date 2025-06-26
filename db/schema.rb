@@ -49,6 +49,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_25_220139) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["tag_id"], name: "index_task_tags_on_tag_id"
+    t.index ["task_id", "tag_id"], name: "index_task_tags_on_task_id_and_tag_id", unique: true
     t.index ["task_id"], name: "index_task_tags_on_task_id"
   end
 
@@ -63,7 +64,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_25_220139) do
     t.datetime "due_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["priority"], name: "index_tasks_on_priority"
     t.index ["project_id"], name: "index_tasks_on_project_id"
+    t.index ["status"], name: "index_tasks_on_status"
     t.index ["user_id"], name: "index_tasks_on_user_id"
   end
 
