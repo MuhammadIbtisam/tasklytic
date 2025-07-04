@@ -1,7 +1,7 @@
 class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable,
-         :confirmable, :lockable, :timeoutable, :trackable
+         :lockable, :timeoutable, :trackable
 
   # Associations
   has_many :projects
@@ -20,9 +20,5 @@ class User < ApplicationRecord
 
   def total_focus_hours
     total_focus_time.to_f / 60
-  end
-
-  def active?
-    last_active_at && last_active_at > 1.hour.ago
   end
 end

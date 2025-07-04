@@ -304,6 +304,8 @@ GEM
       faraday (>= 1)
       faraday-multipart (>= 1)
     securerandom (0.3.2)
+    shoulda-matchers (6.5.0)
+      activesupport (>= 5.2.0)
     sidekiq (7.3.9)
       base64
       connection_pool (>= 2.3.0)
@@ -354,6 +356,7 @@ DEPENDENCIES
   rswag-specs (~> 2.13)
   rswag-ui (~> 2.13)
   ruby-openai (~> 6.3)
+  shoulda-matchers
   sidekiq (~> 7.2)
   tzinfo-data
 

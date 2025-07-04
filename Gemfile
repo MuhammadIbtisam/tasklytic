@@ -29,6 +29,10 @@ group :development, :test do
   gem 'dotenv-rails', '~> 3.1'
 end
 
+group :test do
+  gem 'shoulda-matchers'
+end
+
 group :development do
   # gem "spring"
 end

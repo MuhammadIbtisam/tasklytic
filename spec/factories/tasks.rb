@@ -1,12 +1,12 @@
 FactoryBot.define do
   factory :task do
-    title { "MyString" }
-    description { "MyText" }
-    project { nil }
-    user { nil }
-    priority { 1 }
-    estimated_minutes { 1 }
-    status { 1 }
-    due_date { "2025-06-25 21:57:41" }
+    sequence(:title) { |n| "Task #{n}" }
+    description { "A test task description" }
+    association :project
+    association :user
+    priority { :medium }
+    estimated_minutes { 60 }
+    status { :pending }
+    due_date { 1.week.from_now }
   end
 end

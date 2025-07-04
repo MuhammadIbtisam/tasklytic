@@ -85,7 +85,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_25_220139) do
     t.string "last_name"
     t.string "avatar"
     t.integer "total_focus_time", default: 0
-    t.datetime "last_active_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
