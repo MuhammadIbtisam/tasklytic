@@ -7,6 +7,11 @@ require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
+  if Rails.env.test?
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use ActionDispatch::Session::CookieStore
+    config.middleware.use ActionDispatch::Flash
+  end
 
   # While tests run files are not watched, reloading is not necessary.
   config.enable_reloading = false

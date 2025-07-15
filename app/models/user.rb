@@ -1,7 +1,7 @@
 class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable,
-         :lockable, :timeoutable, :trackable, :jwt_authenticatable, jwt_revocation_strategy: JwtDenylist
+         :timeoutable, :trackable, :jwt_authenticatable, jwt_revocation_strategy: JwtDenylist
 
   # Associations
   has_many :projects

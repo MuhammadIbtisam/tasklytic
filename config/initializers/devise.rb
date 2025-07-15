@@ -324,11 +324,16 @@ Devise.setup do |config|
   config.jwt do |jwt|
     jwt.secret = Rails.application.credentials.secret_key_base
     jwt.dispatch_requests = [
-      ['POST', %r{^/login$}]
+      ['POST', %r{^/users/sign_in$}]
     ]
     jwt.revocation_requests = [
-      ['DELETE', %r{^/logout$}]
+      ['DELETE', %r{^/users/sign_out$}]
     ]
     jwt.expiration_time = 30.minutes.to_i
   end
+
+  # Use ActionController::API as the parent for Devise controllers in API-only apps
+  config.parent_controller = 'ActionController::API'
+  # Disable navigational formats (no flash/session)
+  config.navigational_formats = []
 end 

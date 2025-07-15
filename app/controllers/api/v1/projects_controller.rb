@@ -5,8 +5,22 @@ module Api
       before_action :set_project, only: [:show, :update, :destroy]
 
       def index
-        projects = current_user.projects
-        render json: projects, status: :ok
+        page = params[:page].to_i
+        unless page.positive?
+          return render json: { error: 'page parameter must be positive integer' }, status: :bad_request
+        end
+        per_page = [params[:per_page]&.to_i || 10, 50].min
+        projects = current_user.projects.page(params[:page]).per(per_page)
+        
+        render json: {
+          projects: projects,
+          meta: {
+            page: projects.current_page,
+            per_page: projects.limit_value,
+            total: projects.total_count,
+            total_pages: projects.total_pages
+          }
+        }, status: :ok
       end
 
       def create
@@ -19,7 +33,11 @@ module Api
       end
 
       def show
-        render json: @project, status: :ok
+        render json: {
+          project: @project,
+          tasks: @project.tasks,
+          user_name: @project.user.full_name
+        }, status: :ok
       end
 
       def update

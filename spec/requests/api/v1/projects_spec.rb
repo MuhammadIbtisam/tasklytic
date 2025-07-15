@@ -1,18 +1,82 @@
 require 'swagger_helper'
 
 RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
-  let(:user) { create(:user) }
-  let(:Authorization) { "Bearer #{user.generate_jwt}" }
-  
+  let(:user) { create(:user, password: 'password123') }
+  let(:Authorization) { auth_headers_for_user(user)['Authorization'] }
+
   path '/api/v1/projects' do
     get 'retrieve_projects' do
       tags 'Projects'
       produces 'application/json'
       security [bearerAuth: []]
+      parameter name: 'page', in: :query, type: :integer, required: true, description: 'Page number'
+      parameter name: 'per_page', in: :query, type: :integer, required: false, description: 'Items per page'
 
       response '200', 'project found' do
-        header 'Authorization', :Authorization
-        run_test!
+        let(:page) { 1 }
+        let(:per_page) { 2 }
+
+        before { create_list(:project, 5, user: user) }
+
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].length).to eq(2)
+          expect(res['meta']).to include('page', 'per_page', 'total', 'total_pages')
+        end
+      end
+
+      response '200', 'no project for the user' do
+        let(:page) { 1 }
+        before { Project.delete_all }
+
+
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects']).to eq([])
+          expect(res['meta']['total']).to eq(0)
+          expect(res['meta']['total_pages']).to eq(0)
+        end
+      end
+
+      response '200', 'per_page cap' do
+        let(:page) { 1 }
+        before { create_list(:project, 60, user: user) }
+
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].length).to eq(10)
+        end
+      end
+
+      response '200', 'per_page cap' do
+        let(:page) { 1 }
+        let(:per_page) { 100 }
+        before { create_list(:project, 60, user: user) }
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].length).to eq(50)
+        end
+      end
+
+      response '400', 'Missing required parameter: page' do
+        let(:page) { nil }
+        run_test! do |response|
+          expect( JSON.parse(response.body)['error']).to eq('page parameter must be positive integer')
+        end
+      end
+
+      response '400', 'page param must be positive' do
+        let(:page) { 0 }
+        run_test! do |response|
+          expect( JSON.parse(response.body)['error']).to eq('page parameter must be positive integer')
+        end
+      end
+
+      response '400', 'page param must be positive' do
+        let(:page) { -1 }
+        run_test! do |response|
+          expect( JSON.parse(response.body)['error']).to eq('page parameter must be positive integer')
+        end
       end
     end
 
@@ -37,14 +101,11 @@ RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
       }
 
       response '201', 'project created' do
-        header 'Authorization', :Authorization
         let(:project) { { project: { name: 'Test Project', description: 'This is only a test project' } } }
-
         run_test!
       end
 
       response '422', 'invalid request' do
-        header 'Authorization', :Authorization
         let(:project) { { project: { name: '' } } }
         run_test!
       end
@@ -60,17 +121,21 @@ RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '200', 'project found' do
-        header 'Authorization', :Authorization
         let(:project) { create(:project, user: user) }
         let(:id) { project.id }
-
-        run_test!
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res).to include('project', 'tasks', 'user_name')
+        end
       end
 
       response '404', 'project not found' do
-        header 'Authorization', :Authorization
         let(:id) { 999 }
+        run_test!
+      end
 
+      response '400', 'Page parameter is required' do
+        let(:id) {}
         run_test!
       end
     end
@@ -96,21 +161,17 @@ RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
       }
 
       response '200', 'project updated' do
-        header 'Authorization', :Authorization
         let(:project_record) { create(:project, user: user) }
         let(:id) { project_record.id }
         let(:project) { { project: { name: 'Updated Project' } } }
-
         run_test!
       end
 
       response '404', 'project not found' do
-        header 'Authorization', :Authorization
         let(:user1) { create(:user) }
         let(:project_record) { create(:project, user: user1) }
         let(:id) { project_record.id }
         let(:project) { { project: { name: 'Updated Project' } } }
-
         run_test!
       end
     end
@@ -122,19 +183,15 @@ RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
       parameter name: :id, in: :path, type: :integer, required: true
 
       response '204', 'project deleted' do
-        header 'Authorization', :Authorization
         let(:project) { create(:project, user: user) }
         let(:id) { project.id }
-
         run_test!
       end
 
       response '404', 'project not found' do
-        header 'Authorization', :Authorization
         let(:user1) { create(:user) }
         let(:project) { create(:project, user: user1) }
         let(:id) { project.id }
-
         run_test!
       end
     end
