@@ -11,10 +11,38 @@ RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
       security [bearerAuth: []]
       parameter name: 'page', in: :query, type: :integer, required: true, description: 'Page number'
       parameter name: 'per_page', in: :query, type: :integer, required: false, description: 'Items per page'
-
+      parameter name: 'user_id', in: :query, type: :integer, required: false, description: "Item per page"
       response '200', 'project found' do
         let(:page) { 1 }
         let(:per_page) { 2 }
+
+        before { create_list(:project, 5) }
+
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].length).to eq(2)
+          expect(res['meta']).to include('page', 'per_page', 'total', 'total_pages')
+        end
+      end
+
+      response '200', 'when no project is associated to the user' do
+        let(:page) { 1 }
+        let(:per_page) { 2 }
+        let(:user_id) { user.id + 1 }
+
+        before { create_list(:project, 5, user: user) }
+
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].length).to eq(0)
+          expect(res['meta']).to include('page', 'per_page', 'total', 'total_pages')
+        end
+      end
+
+      response '200', 'when projects is associated to the user' do
+        let(:page) { 1 }
+        let(:per_page) { 2 }
+        let(:user_id) { user.id }
 
         before { create_list(:project, 5, user: user) }
 
@@ -22,6 +50,21 @@ RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
           res = JSON.parse(response.body)
           expect(res['projects'].length).to eq(2)
           expect(res['meta']).to include('page', 'per_page', 'total', 'total_pages')
+        end
+      end
+
+      response '200', 'return the projects in descending order by their creation date' do
+        let(:page) { 1 }
+        let(:per_page) { 3 }
+
+        let!(:oldest_project) { create(:project, created_at: 3.days.ago) }
+        let!(:old_project) { create(:project, created_at: 2.days.ago) }
+        let!(:new_project) { create(:project) }
+        puts 'I am here'
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].first['id']).to eq(new_project.id)
+          expect(res['projects'].last['id']).to eq(oldest_project.id)
         end
       end
 

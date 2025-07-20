@@ -1,145 +1,199 @@
-require 'rails_helper'
+require 'swagger_helper'
 
-RSpec.describe Api::V1::ProjectsController, type: :controller do
-  let(:user) { create(:user) }
-  let(:valid_attributes) { { name: 'Test Project', description: 'Test Description' } }
-  let(:invalid_attributes) { { name: '', description: 'Test Description' } }
+RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
+  let(:user) { create(:user, password: 'password123') }
+  let(:Authorization) { auth_headers_for_user(user)['Authorization'] }
 
-  let(:jwt_headers) { auth_headers_for_test(user) }
+  path '/api/v1/projects' do_doc
+    get 'retrieve_projects' do
+      tags 'Projects'
+      produces 'application/json'
+      security [bearerAuth: []]
+      parameter name: 'page', in: :query, type: :integer, required: true, description: 'Page number'
+      parameter name: 'per_page', in: :query, type: :integer, required: false, description: 'Items per page'
 
-  describe 'GET #index' do
-    it 'returns a list of user projects' do
-      project1 = create(:project, user: user)
-      project2 = create(:project, user: user)
-      other_user_project = create(:project, user: create(:user))
+      response '200', 'project found' do
+        let(:page) { 1 }
+        let(:per_page) { 2 }
 
-      request.headers.merge!(jwt_headers)
-      get :index
+        before { create_list(:project, 5, user: user) }
 
-      expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
-      expect(json_response.length).to eq(2)
-      expect(json_response.map { |p| p['id'] }).to match_array([project1.id, project2.id])
-    end
-  end
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].length).to eq(2)
+          expect(res['meta']).to include('page', 'per_page', 'total', 'total_pages')
+        end
+      end
 
-  describe 'GET #show' do
-    it 'returns the requested project' do
-      project = create(:project, user: user)
+      response '200', 'no project for the user' do
+        let(:page) { 1 }
+        before { Project.delete_all }
 
-      request.headers.merge!(jwt_headers)
-      get :show, params: { id: project.id }
 
-      expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
-      expect(json_response['id']).to eq(project.id)
-      expect(json_response['name']).to eq(project.name)
-    end
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects']).to eq([])
+          expect(res['meta']['total']).to eq(0)
+          expect(res['meta']['total_pages']).to eq(0)
+        end
+      end
 
-    it 'returns 404 for project not owned by user' do
-      other_project = create(:project, user: create(:user))
+      response '200', 'per_page cap' do
+        let(:page) { 1 }
+        before { create_list(:project, 60, user: user) }
 
-      request.headers.merge!(jwt_headers)
-      get :show, params: { id: other_project.id }
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].length).to eq(10)
+        end
+      end
 
-      expect(response).to have_http_status(:not_found)
-    end
-  end
+      response '200', 'per_page cap' do
+        let(:page) { 1 }
+        let(:per_page) { 100 }
+        before { create_list(:project, 60, user: user) }
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res['projects'].length).to eq(50)
+        end
+      end
 
-  describe 'POST #create' do
-    context 'with valid parameters' do
-      it 'creates a new project' do
-        expect {
-          request.headers.merge!(jwt_headers)
-          post :create, params: { project: valid_attributes }
-        }.to change(Project, :count).by(1)
+      response '400', 'Missing required parameter: page' do
+        let(:page) { nil }
+        run_test! do |response|
+          expect( JSON.parse(response.body)['error']).to eq('page parameter must be positive integer')
+        end
+      end
 
-        expect(response).to have_http_status(:created)
-        json_response = JSON.parse(response.body)
-        expect(json_response['name']).to eq('Test Project')
-        expect(json_response['user_id']).to eq(user.id)
+      response '400', 'page param must be positive' do
+        let(:page) { 0 }
+        run_test! do |response|
+          expect( JSON.parse(response.body)['error']).to eq('page parameter must be positive integer')
+        end
+      end
+
+      response '400', 'page param must be positive' do
+        let(:page) { -1 }
+        run_test! do |response|
+          expect( JSON.parse(response.body)['error']).to eq('page parameter must be positive integer')
+        end
       end
     end
 
-    context 'with invalid parameters' do
-      it 'does not create a project' do
-        expect {
-          request.headers.merge!(jwt_headers)
-          post :create, params: { project: invalid_attributes }
-        }.not_to change(Project, :count)
+    post 'create_project' do
+      tags 'Projects'
+      consumes 'application/json'
+      produces 'application/json'
+      security [bearerAuth: []]
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        json_response = JSON.parse(response.body)
-        expect(json_response['errors']).to include("Name can't be blank")
+      parameter name: :project, in: :body, schema: {
+        type: :object,
+        properties: {
+          project: {
+            type: :object,
+            properties: {
+              name: { type: :string },
+              description: { type: :string }
+            },
+            required: ['name']
+          }
+        }
+      }
+
+      response '201', 'project created' do
+        let(:project) { { project: { name: 'Test Project', description: 'This is only a test project' } } }
+        run_test!
       end
-    end
 
-    it 'enforces uniqueness of project name per user' do
-      create(:project, user: user, name: 'Test Project')
-
-      request.headers.merge!(jwt_headers)
-      post :create, params: { project: valid_attributes }
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      json_response = JSON.parse(response.body)
-      expect(json_response['errors']).to include('Name has already been taken')
+      response '422', 'invalid request' do
+        let(:project) { { project: { name: '' } } }
+        run_test!
+      end
     end
   end
 
-  describe 'PUT #update' do
-    let(:project) { create(:project, user: user) }
+  path '/api/v1/projects/{id}' do
+    get 'Retrieves a project' do
+      tags 'Projects'
+      produces 'application/json'
+      security [bearerAuth: []]
 
-    context 'with valid parameters' do
-      it 'updates the requested project' do
-        request.headers.merge!(jwt_headers)
-        put :update, params: { id: project.id, project: { name: 'Updated Project' } }
+      parameter name: :id, in: :path, type: :integer, required: true
 
-        expect(response).to have_http_status(:ok)
-        project.reload
-        expect(project.name).to eq('Updated Project')
+      response '200', 'project found' do
+        let(:project) { create(:project, user: user) }
+        let(:id) { project.id }
+        run_test! do |response|
+          res = JSON.parse(response.body)
+          expect(res).to include('project', 'tasks', 'user_name')
+        end
+      end
+
+      response '404', 'project not found' do
+        let(:id) { 999 }
+        run_test!
+      end
+
+      response '400', 'Page parameter is required' do
+        let(:id) {}
+        run_test!
       end
     end
 
-    context 'with invalid parameters' do
-      it 'returns unprocessable entity status' do
-        request.headers.merge!(jwt_headers)
-        put :update, params: { id: project.id, project: invalid_attributes }
+    put 'Updates a project' do
+      tags 'Projects'
+      consumes 'application/json'
+      produces 'application/json'
+      security [bearerAuth: []]
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        json_response = JSON.parse(response.body)
-        expect(json_response['errors']).to include("Name can't be blank")
+      parameter name: :id, in: :path, type: :integer, required: true
+      parameter name: :project, in: :body, schema: {
+        type: :object,
+        properties: {
+          project: {
+            type: :object,
+            properties: {
+              name: { type: :string },
+              description: { type: :string }
+            }
+          }
+        }
+      }
+
+      response '200', 'project updated' do
+        let(:project_record) { create(:project, user: user) }
+        let(:id) { project_record.id }
+        let(:project) { { project: { name: 'Updated Project' } } }
+        run_test!
+      end
+
+      response '404', 'project not found' do
+        let(:user1) { create(:user) }
+        let(:project_record) { create(:project, user: user1) }
+        let(:id) { project_record.id }
+        let(:project) { { project: { name: 'Updated Project' } } }
+        run_test!
       end
     end
 
-    it 'returns 404 for project not owned by user' do
-      other_project = create(:project, user: create(:user))
+    delete 'Deletes a project' do
+      tags 'Projects'
+      security [bearerAuth: []]
 
-      request.headers.merge!(jwt_headers)
-      put :update, params: { id: other_project.id, project: valid_attributes }
+      parameter name: :id, in: :path, type: :integer, required: true
 
-      expect(response).to have_http_status(:not_found)
-    end
-  end
+      response '204', 'project deleted' do
+        let(:project) { create(:project, user: user) }
+        let(:id) { project.id }
+        run_test!
+      end
 
-  describe 'DELETE #destroy' do
-    it 'destroys the requested project' do
-      project = create(:project, user: user)
-
-      expect {
-        request.headers.merge!(jwt_headers)
-        delete :destroy, params: { id: project.id }
-      }.to change(Project, :count).by(-1)
-
-      expect(response).to have_http_status(:no_content)
-    end
-
-    it 'returns 404 for project not owned by user' do
-      other_project = create(:project, user: create(:user))
-
-      request.headers.merge!(jwt_headers)
-      delete :destroy, params: { id: other_project.id }
-
-      expect(response).to have_http_status(:not_found)
+      response '404', 'project not found' do
+        let(:user1) { create(:user) }
+        let(:project) { create(:project, user: user1) }
+        let(:id) { project.id }
+        run_test!
+      end
     end
   end
 end

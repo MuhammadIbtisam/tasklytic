@@ -10,8 +10,12 @@ module Api
           return render json: { error: 'page parameter must be positive integer' }, status: :bad_request
         end
         per_page = [params[:per_page]&.to_i || 10, 50].min
-        projects = current_user.projects.page(params[:page]).per(per_page)
-        
+        projects = if params[:user_id].present?
+          Project.where(user_id: params[:user_id]).order(created_at: :desc).page(page).per(per_page)
+        else
+          Project.order(created_at: :desc).page(page).per(per_page)
+        end
+
         render json: {
           projects: projects,
           meta: {
