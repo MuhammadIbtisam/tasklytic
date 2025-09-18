@@ -1,10 +1,10 @@
 require 'swagger_helper'
 
-RSpec.describe 'API::V1::Projects', swagger_doc: 'v1/swagger.yaml' do
+RSpec.describe 'API::V1::Projects', type: :request, swagger_doc: 'v1/swagger.yaml' do
   let(:user) { create(:user, password: 'password123') }
   let(:Authorization) { auth_headers_for_user(user)['Authorization'] }
 
-  path '/api/v1/projects' do_doc
+  path '/api/v1/projects' do
     get 'retrieve_projects' do
       tags 'Projects'
       produces 'application/json'

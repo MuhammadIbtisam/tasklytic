@@ -10,9 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_07_08_210613) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_18_184933) do
   # These are extensions that must be enabled in order to support this database
-  enable_extension "plpgsql"
+  enable_extension "pg_catalog.plpgsql"
 
   create_table "focus_sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
