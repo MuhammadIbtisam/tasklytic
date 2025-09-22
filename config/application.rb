@@ -9,7 +9,7 @@ Bundler.require(*Rails.groups)
 module Tasklytic
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 7.1
+    config.load_defaults 8.0
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
@@ -28,5 +28,13 @@ module Tasklytic
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Rails 8 session configuration for JWT authentication
+    config.session_store :cookie_store, key: '_tasklytic_session'
+    config.session_options = {
+      secure: Rails.env.production?,
+      httponly: true,
+      same_site: :lax
+    }
   end
 end

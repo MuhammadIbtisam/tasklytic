@@ -336,4 +336,9 @@ Devise.setup do |config|
   config.parent_controller = 'ActionController::API'
   # Disable navigational formats (no flash/session)
   config.navigational_formats = []
+
+  # adding this for rails 8 compatability
+  config.timeout_in = 30.minutes
+  config.remember_for = 2.weeks
+  config.extend_remember_period = false
 end 
