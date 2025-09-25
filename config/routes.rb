@@ -15,8 +15,21 @@ Rails.application.routes.draw do
       resources :projects
       resources :tasks
       resources :focus_sessions do
+        collection do
+          get :current
+          get :stats
+        end
         member do
           patch :stop
+        end
+      end
+      resources :tags do
+        collection do
+          get :popular
+          get :stats
+          get :for_task
+          post :assign_to_task
+          delete :remove_from_task
         end
       end
     end

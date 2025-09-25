@@ -134,7 +134,7 @@ RSpec.describe 'API::V1::Tasks', type: :request, swagger_doc: 'v1/swagger.yaml' 
             run_test! do |response|
               res = JSON.parse(response.body)
               expect(res['tasks'].length).to eq(30)
-              expect(res['meta']['per_page']).to eq(50) # Should be capped at 50
+              expect(res['meta']['per_page']).to eq(50)
             end
           end
 
@@ -144,7 +144,7 @@ RSpec.describe 'API::V1::Tasks', type: :request, swagger_doc: 'v1/swagger.yaml' 
 
             run_test! do |response|
               res = JSON.parse(response.body)
-              expect(res['tasks'].length).to eq(10) # Default per_page
+              expect(res['tasks'].length).to eq(10)
               expect(res['meta']['per_page']).to eq(10)
             end
           end
@@ -301,8 +301,8 @@ RSpec.describe 'API::V1::Tasks', type: :request, swagger_doc: 'v1/swagger.yaml' 
               {
                 task: {
                   title: '',
-                  status: 'pending', # Use valid status
-                  priority: 'medium', # Use valid priority
+                  status: 'pending',
+                  priority: 'medium',
                   due_date: nil
                 }
               }
@@ -428,7 +428,7 @@ RSpec.describe 'API::V1::Tasks', type: :request, swagger_doc: 'v1/swagger.yaml' 
               {
                 task: {
                   title: '',
-                  status: 'pending' # Use valid status
+                  status: 'pending'
                 }
               }
             end
